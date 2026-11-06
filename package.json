@@ -1,0 +1,24 @@
+{
+  "name": "assignment-8---node.js-and-express-rest-api-",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  "start": "node index.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mikeyphone/Assignment8NodeAndExpressREST-API.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Mikeyphone/Assignment8NodeAndExpressREST-API/issues"
+  },
+  "homepage": "https://github.com/Mikeyphone/Assignment8NodeAndExpressREST-API#readme",
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
