@@ -1,8 +1,9 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Global Middleware for JSON payload parsing
+// Global Middleware
 app.use(express.json());
 
 // Custom Log Catcher Middleware
@@ -12,66 +13,87 @@ app.use((req, res, next) => {
     next();
 });
 
-//Data Collection
-let resources = [
-    { id: 1, name: "Test Task", status: "Pending" },
-    { id: 2, name: "Code Structure Review", status: "Completed" }
-];
-let currentId = 3;
+// MongoDB Connection (Local)
+mongoose.connect('mongodb://127.0.0.1:27017/assignment9')
+    .then(() => console.log('Successfully connected to MongoDB.'))
+    .catch(err => console.error('MongoDB connection error:', err));
 
-// 1. GET /api/resources — Return all elements
-app.get('/api/resources', (req, res) => {
-    res.status(200).json(resources);
+// Mongoose Schema & Model
+const itemSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    status: { type: String, required: true }
 });
+const Item = mongoose.model('Item', itemSchema);
 
-// 2. GET /api/resources/:id — Return unique item or 404
-app.get('/api/resources/:id', (req, res) => {
-    const id = parseInt(req.params.id);
-    const item = resources.find(r => r.id === id);
-    
-    if (!item) {
-        return res.status(404).json({ error: "Resource not found." });
+// 1. GET /api/items — Return all entries directly from database
+app.get('/api/items', async (req, res) => {
+    try {
+        const items = await Item.find();
+        res.status(200).json(items);
+    } catch (err) {
+        res.status(500).json({ error: "Server error fetching items." });
     }
-    res.status(200).json(item);
 });
 
-// 3. POST /api/resources — Collect JSON, append ID, push to array
-app.post('/api/resources', (req, res) => {
-    const newItem = {
-        id: currentId++,
-        ...req.body
-    };
-    resources.push(newItem);
-    res.status(201).json(newItem);
-});
-
-// 4. PUT /api/resources/:id — Overwrite properties for matching ID
-app.put('/api/resources/:id', (req, res) => {
-    const id = parseInt(req.params.id);
-    const index = resources.findIndex(r => r.id === id);
-    
-    if (index === -1) {
-        return res.status(404).json({ error: "Resource not found for update." });
+// 2. GET /api/items/:id — Target one item by database ID
+app.get('/api/items/:id', async (req, res) => {
+    try {
+        const item = await Item.findById(req.params.id);
+        if (!item) {
+            return res.status(404).json({ error: "Item not found." });
+        }
+        res.status(200).json(item);
+    } catch (err) {
+        // A CastError usually means the ID format was invalid
+        res.status(404).json({ error: "Item not found or invalid ID." });
     }
-    
-    resources[index] = { ...resources[index], ...req.body, id };
-    res.status(200).json(resources[index]);
 });
 
-// 5. DELETE /api/resources/:id — Target and splice out matching object
-app.delete('/api/resources/:id', (req, res) => {
-    const id = parseInt(req.params.id);
-    const index = resources.findIndex(r => r.id === id);
-    
-    if (index === -1) {
-        return res.status(404).json({ error: "Resource not found for deletion." });
+// 3. POST /api/items — Parse body, execute insert, return 201
+app.post('/api/items', async (req, res) => {
+    try {
+        const newItem = await Item.create({
+            name: req.body.name,
+            status: req.body.status
+        });
+        res.status(201).json(newItem);
+    } catch (err) {
+        res.status(400).json({ error: "Invalid data submitted." });
     }
-    
-    resources.splice(index, 1);
-    res.status(200).json({ message: `Resource ${id} successfully deleted.` });
 });
 
-// Initialize server execution
+// 4. PUT /api/items/:id — Run update script for matching document
+app.put('/api/items/:id', async (req, res) => {
+    try {
+        const updatedItem = await Item.findByIdAndUpdate(
+            req.params.id, 
+            { name: req.body.name, status: req.body.status },
+            { new: true, runValidators: true } // new: true returns the updated document
+        );
+        
+        if (!updatedItem) {
+            return res.status(404).json({ error: "Item not found for update." });
+        }
+        res.status(200).json(updatedItem);
+    } catch (err) {
+        res.status(400).json({ error: "Invalid data or ID." });
+    }
+});
+
+// 5. DELETE /api/items/:id — Clear target entry permanently
+app.delete('/api/items/:id', async (req, res) => {
+    try {
+        const deletedItem = await Item.findByIdAndDelete(req.params.id);
+        if (!deletedItem) {
+            return res.status(404).json({ error: "Item not found for deletion." });
+        }
+        res.status(200).json({ message: "Item successfully deleted." });
+    } catch (err) {
+        res.status(400).json({ error: "Invalid ID format." });
+    }
+});
+
+// Initialize server
 app.listen(PORT, () => {
     console.log(`Server live and listening on http://localhost:${PORT}`);
 });
