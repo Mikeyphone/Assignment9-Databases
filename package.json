@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/Mikeyphone/Assignment9-Databases#readme",
   "dependencies": {
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "mongoose": "^9.12.0"
   }
 }
